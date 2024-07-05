@@ -17,12 +17,15 @@ router.get('/', async (req, res) => {
 // POST route: Create a new semaforo
 router.post('/', async (req, res) => {
     try {
-        const { x_cord, y_cord } = req.body;
-        
+        const { latitude, longitude, identity} = req.body;
+
         // Create new Semaforo instance
         const newSemaforo = new Semaforo({
-            x_cord,
-            y_cord,
+            location: {
+                type: 'Point',
+                coordinates: [longitude, latitude]
+            },
+            identity,
             open_time: 6000 // Example: set open_time to current date/time
         });
 
@@ -30,6 +33,26 @@ router.post('/', async (req, res) => {
         const savedSemaforo = await newSemaforo.save();
 
         res.status(201).json(savedSemaforo); // Respond with the created semaforo
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// GET route: Find semaforos within a specific area
+router.get('/find', async (req, res) => {
+    try {
+        const { latitude, longitude, distance } = req.query;
+
+        const semaforos = await Semaforo.find({
+            location: {
+                $geoWithin: {
+                    $centerSphere: [[longitude, latitude], distance / 6378.1]
+                }
+            }
+        });
+
+        res.json(semaforos);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server Error' });
